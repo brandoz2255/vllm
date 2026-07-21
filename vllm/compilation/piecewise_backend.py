@@ -272,6 +272,7 @@ class PiecewiseBackend:
                 graph_index=self.piecewise_compile_index,
                 num_graphs=self.total_piecewise_compiles,
                 is_encoder=self.vllm_backend.is_encoder,
+                vllm_config=self.vllm_config,
             )
 
             range_entry.compiled = True

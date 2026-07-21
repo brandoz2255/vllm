@@ -70,6 +70,7 @@ class CompilerInterface:
         compiler_config: dict[str, Any],
         compile_range: Range,
         key: str | None = None,
+        vllm_config: VllmConfig | None = None,
     ) -> tuple[Callable[..., Any] | None, Any | None]:
         """
         Compile the graph with the given example inputs and compiler config,
@@ -94,6 +95,9 @@ class CompilerInterface:
         `key` is required for StandaloneInductorAdapter, it specifies where to
         save the compiled artifact. The compiled artifact gets saved to
         `cache_dir/key`.
+        
+        `vllm_config` is optional and used for optimization decisions like
+        disabling autotune for multi-GPU tensor parallelism.
         """
         return None, None
 
@@ -284,13 +288,14 @@ class InductorStandaloneAdaptor(CompilerInterface):
         compiler_config: dict[str, Any],
         compile_range: Range,
         key: str | None = None,
+        vllm_config: VllmConfig | None = None,
     ) -> tuple[Callable[..., Any] | None, Any | None]:
         _apply_constrain_to_fx_strides_patch()
         compilation_counter.num_inductor_compiles += 1
         current_config = {}
         if compiler_config is not None:
             current_config.update(compiler_config)
-        set_inductor_config(current_config, compile_range)
+        set_inductor_config(current_config, compile_range, vllm_config)
         set_functorch_config()
 
         if compile_range.is_single_size():
@@ -486,6 +491,7 @@ class InductorAdaptor(CompilerInterface):
         compiler_config: dict[str, Any],
         compile_range: Range,
         key: str | None = None,
+        vllm_config: VllmConfig | None = None,
     ) -> tuple[Callable[..., Any] | None, Any | None]:
         _apply_constrain_to_fx_strides_patch()
         compilation_counter.num_inductor_compiles += 1
@@ -499,7 +505,7 @@ class InductorAdaptor(CompilerInterface):
         current_config["fx_graph_cache"] = True
         current_config["fx_graph_remote_cache"] = False
 
-        set_inductor_config(current_config, compile_range)
+        set_inductor_config(current_config, compile_range, vllm_config)
         set_functorch_config()
 
         # inductor can inplace modify the graph, so we need to copy it
@@ -750,10 +756,36 @@ class InductorAdaptor(CompilerInterface):
             return contextlib.nullcontext()
 
 
-def set_inductor_config(config: dict[str, Any], compile_range: Range) -> None:
+def set_inductor_config(
+    config: dict[str, Any],
+    compile_range: Range,
+    vllm_config: VllmConfig | None = None,
+) -> None:
+    """Configure Inductor compilation settings.
+
+    Args:
+        config: Inductor config dictionary to modify
+        compile_range: The range of batch sizes to compile for
+        vllm_config: VllmConfig instance (optional, for TP detection)
+    """
+    # Disable autotune for multi-GPU TP to avoid illegal memory access
+    # during Triton kernel benchmarking. The benchmark subprocess doesn't
+    # properly handle multi-rank CUDA contexts and NCCL symmetric memory.
+    if vllm_config and vllm_config.parallel_config.tensor_parallel_size > 1:
+        config["max_autotune"] = False
+        config["coordinate_descent_tuning"] = False
+        logger.info_once(
+            "Disabling Triton kernel autotune for tensor_parallel_size=%d. "
+            "Autotune can cause illegal memory access with multi-GPU setups. "
+            "Performance impact is minimal (~1-2%%) as most speedup comes from "
+            "kernel fusion, not individual kernel parameter tuning.",
+            vllm_config.parallel_config.tensor_parallel_size,
+        )
+        return
+
     if compile_range.is_single_size():
         # for a specific batch size, tuning triton kernel parameters
-        # can be beneficial
+        # can be beneficial (single-GPU only)
         config["max_autotune"] = envs.VLLM_ENABLE_INDUCTOR_MAX_AUTOTUNE
         config["coordinate_descent_tuning"] = (
             envs.VLLM_ENABLE_INDUCTOR_COORDINATE_DESCENT_TUNING
@@ -803,6 +835,7 @@ class EagerAdaptor(CompilerInterface):
         compiler_config: dict[str, Any],
         compile_range: Range,
         key: str | None = None,
+        vllm_config: VllmConfig | None = None,
     ) -> tuple[Callable[..., Any] | None, Any | None]:
         compilation_counter.num_eager_compiles += 1
         # we don't need to compile the graph, just return the graph itself.

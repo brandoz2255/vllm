@@ -271,6 +271,7 @@ class CompilerManager:
         graph_index: int = 0,
         num_graphs: int = 1,
         is_encoder: bool = False,
+        vllm_config: VllmConfig | None = None,
     ) -> Any:
         if graph_index == 0:
             # before compiling the first graph, record the start time
@@ -356,6 +357,7 @@ class CompilerManager:
                         additional_inductor_config,
                         compile_range,
                         maybe_key,
+                        vllm_config,
                     )
                 except StopCompiling:
                     assert cache_key is not None
