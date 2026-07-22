@@ -138,6 +138,7 @@ RUN if [ "${BUILD_OS}" = "manylinux" ]; then \
         # which the pytorch manylinux image already enables. git/curl/sudo
         # are typically pre-installed but listed defensively.
         echo "sslverify=false" >> /etc/dnf/dnf.conf \
+        && dnf install -y epel-release \
         && dnf install -y --setopt=install_weak_deps=False \
             ccache \
             git \
