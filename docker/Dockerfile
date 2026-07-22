@@ -128,6 +128,8 @@ ENV UV_CACHE_DIR=/opt/uv/cache
 ENV UV_INSTALL_DIR=/opt/uv/bin
 ENV PATH="/opt/venv/bin:/opt/uv/bin:$PATH"
 ENV VIRTUAL_ENV="/opt/venv"
+# Disable SSL verification for uv in restricted network environments
+ENV UV_INSECURE_HOST=*
 
 # Install system dependencies including build tools.
 # The Ubuntu path uses apt + deadsnakes-via-uv for Python; the manylinux path
@@ -204,9 +206,15 @@ RUN mkdir -p "${UV_PYTHON_INSTALL_DIR}" "${UV_CACHE_DIR}" "${UV_INSTALL_DIR}" \
     && if [ "${BUILD_OS}" = "manylinux" ]; then \
            # manylinux images ship Python at /opt/python/cpXY-cpXY/; point uv
            # at the matching interpreter rather than letting it fetch one.
+           # Rocky Linux and other RHEL-based systems don't have this, so let
+           # uv download Python if the manylinux path doesn't exist.
            PYV_NODOT=$(echo ${PYTHON_VERSION} | tr -d '.') \
            && MANYLINUX_PY=/opt/python/cp${PYV_NODOT}-cp${PYV_NODOT}/bin/python${PYTHON_VERSION} \
-           && uv venv --seed /opt/venv --python "$MANYLINUX_PY"; \
+           && if [ -f "$MANYLINUX_PY" ]; then \
+               uv venv --seed /opt/venv --python "$MANYLINUX_PY"; \
+           else \
+               uv venv --seed /opt/venv --python ${PYTHON_VERSION}; \
+           fi; \
        else \
            uv venv --seed /opt/venv --python ${PYTHON_VERSION}; \
        fi \
