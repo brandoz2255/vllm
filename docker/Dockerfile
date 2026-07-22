@@ -146,7 +146,7 @@ RUN if [ "${BUILD_OS}" = "manylinux" ]; then \
             sudo \
             rdma-core-devel \
         && dnf clean all \
-        && rm -rf /var/cache/dnf; \
+        && rm -rf /var/cache/dnf/* || true; \
     else \
         apt-get update -y \
         && apt-get install -y --no-install-recommends \
