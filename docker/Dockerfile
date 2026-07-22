@@ -224,6 +224,18 @@ RUN mkdir -p "${UV_PYTHON_INSTALL_DIR}" "${UV_CACHE_DIR}" "${UV_INSTALL_DIR}" \
     && ln -sf /opt/venv/bin/pip /usr/bin/pip \
     && python3 --version && python3 -m pip --version
 
+# Configure cargo to skip SSL verification for crates.io in restricted networks
+RUN mkdir -p /root/.cargo \
+    && echo '[http]' > /root/.cargo/config.toml \
+    && echo 'check-revoke = false' >> /root/.cargo/config.toml \
+    && echo '[net]' >> /root/.cargo/config.toml \
+    && echo 'git-fetch-with-cli = true' >> /root/.cargo/config.toml \
+    && git config --global http.sslVerify false
+
+ENV CARGO_HTTP_CHECK_REVOKE=false \
+    CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    GIT_SSL_NO_VERIFY=1
+
 # UV_LINK_MODE=copy applies to subsequent `uv pip install` RUNs (avoids
 # hardlink failures with BuildKit cache mounts); it must not be set during
 # `uv venv` above, which relies on hardlinking /opt/venv back to the
