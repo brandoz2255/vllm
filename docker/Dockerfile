@@ -137,7 +137,8 @@ RUN if [ "${BUILD_OS}" = "manylinux" ]; then \
         # rdma-core-devel provides libibverbs headers; ccache lives in EPEL,
         # which the pytorch manylinux image already enables. git/curl/sudo
         # are typically pre-installed but listed defensively.
-        dnf install -y --setopt=install_weak_deps=False \
+        echo "sslverify=false" >> /etc/dnf/dnf.conf \
+        && dnf install -y --setopt=install_weak_deps=False \
             ccache \
             git \
             curl \
