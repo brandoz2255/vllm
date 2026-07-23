@@ -225,13 +225,15 @@ RUN mkdir -p "${UV_PYTHON_INSTALL_DIR}" "${UV_CACHE_DIR}" "${UV_INSTALL_DIR}" \
     && python3 --version && python3 -m pip --version
 
 # Configure cargo to skip SSL verification for crates.io in restricted networks
-RUN mkdir -p /root/.cargo /root/.curlrc \
+RUN mkdir -p /root/.cargo /usr/local/cargo \
     && printf '[http]\ncheck-revoke = false\nssl-version = "tlsv1.2"\n\n[net]\ngit-fetch-with-cli = true\n' > /root/.cargo/config.toml \
     && echo 'insecure' > /root/.curlrc \
     && git config --global http.sslVerify false \
     && git config --global http.sslCAInfo "" \
     && curl -LsSfk https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal \
     && . "$HOME/.cargo/env" \
+    && ln -sf /root/.cargo/bin/* /usr/local/bin/ \
+    && cp /root/.cargo/config.toml /usr/local/cargo/config.toml \
     && cargo --version \
     && cargo search cargo --limit 1 || echo "Warning: cargo search test failed (expected in restricted networks)"
 
@@ -283,10 +285,12 @@ RUN --mount=type=cache,target=/opt/uv/cache \
     && export GIT_SSL_NO_VERIFY=1 \
     && export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
     && export SSL_CERT_FILE="" \
+    && export CURL_CA_BUNDLE="" \
     && mkdir -p /root/.cargo /root/.cache/puccinialin/.cargo /root/.cache/puccinialin/rustup/.cargo \
     && printf '[http]\ncheck-revoke = false\n\n[net]\ngit-fetch-with-cli = true\n\n[registries.crates-io]\nprotocol = "sparse"\n' > /root/.cargo/config.toml \
     && cp /root/.cargo/config.toml /root/.cache/puccinialin/.cargo/config.toml \
     && cp /root/.cargo/config.toml /root/.cache/puccinialin/rustup/.cargo/config.toml \
+    && echo 'insecure' > /root/.curlrc \
     && if [ "$(echo $CUDA_VERSION | cut -d. -f1)" = "12" ]; then \
         sed -i 's/^nvidia-cutlass-dsl\[cu13\]/nvidia-cutlass-dsl/' requirements/cuda.txt; \
         sed -i 's/^humming-kernels\[cu13\]/humming-kernels[cu12]/' requirements/cuda.txt; \
@@ -297,10 +301,10 @@ RUN --mount=type=cache,target=/opt/uv/cache \
         --index-url ${PYTORCH_CUDA_INDEX_BASE_URL}/nightly/cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.') \
         && echo "Installing other requirements..." \
         && /opt/venv/bin/python3 use_existing_torch.py --prefix \
-        && uv pip install --python /opt/venv/bin/python3 -r requirements/cuda.txt \
+        && uv pip install --python /opt/venv/bin/python3 --no-build-isolation -r requirements/cuda.txt \
         --extra-index-url ${PYTORCH_CUDA_INDEX_BASE_URL}/nightly/cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.'); \
     else \
-        uv pip install --python /opt/venv/bin/python3 -r requirements/cuda.txt \
+        uv pip install --python /opt/venv/bin/python3 --no-build-isolation -r requirements/cuda.txt \
         --extra-index-url ${PYTORCH_CUDA_INDEX_BASE_URL}/cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.'); \
     fi
 
