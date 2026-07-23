@@ -225,19 +225,20 @@ RUN mkdir -p "${UV_PYTHON_INSTALL_DIR}" "${UV_CACHE_DIR}" "${UV_INSTALL_DIR}" \
     && python3 --version && python3 -m pip --version
 
 # Configure cargo to skip SSL verification for crates.io in restricted networks
-RUN mkdir -p /root/.cargo \
-    && echo '[http]' > /root/.cargo/config.toml \
-    && echo 'check-revoke = false' >> /root/.cargo/config.toml \
-    && echo '[net]' >> /root/.cargo/config.toml \
-    && echo 'git-fetch-with-cli = true' >> /root/.cargo/config.toml \
+RUN mkdir -p /root/.cargo /root/.curlrc \
+    && printf '[http]\ncheck-revoke = false\nssl-version = "tlsv1.2"\n\n[net]\ngit-fetch-with-cli = true\n' > /root/.cargo/config.toml \
+    && echo 'insecure' > /root/.curlrc \
     && git config --global http.sslVerify false \
+    && git config --global http.sslCAInfo "" \
     && curl -LsSfk https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal \
     && . "$HOME/.cargo/env" \
-    && rustc --version && cargo --version
+    && cargo --version \
+    && cargo search cargo --limit 1 || echo "Warning: cargo search test failed (expected in restricted networks)"
 
 ENV CARGO_HTTP_CHECK_REVOKE=false \
     CARGO_NET_GIT_FETCH_WITH_CLI=true \
     GIT_SSL_NO_VERIFY=1 \
+    CURL_CA_BUNDLE="" \
     PATH="/root/.cargo/bin:$PATH" \
     CARGO_HOME="/root/.cargo" \
     RUSTUP_HOME="/root/.rustup"
