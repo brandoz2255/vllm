@@ -233,15 +233,7 @@ RUN mkdir -p /root/.cargo /usr/local/cargo \
     && curl -LsSfk https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal \
     && . "$HOME/.cargo/env" \
     && mv /root/.cargo/bin/cargo /root/.cargo/bin/cargo.real \
-    && cat > /root/.cargo/bin/cargo <<'CARGOEOF'
-#!/bin/bash
-export CARGO_HTTP_CHECK_REVOKE=false
-export CARGO_NET_GIT_FETCH_WITH_CLI=true
-export GIT_SSL_NO_VERIFY=1
-export CURL_CA_BUNDLE=""
-export SSL_CERT_FILE=""
-exec /root/.cargo/bin/cargo.real "$@"
-CARGOEOF
+    && printf '#!/bin/bash\nexport CARGO_HTTP_CHECK_REVOKE=false\nexport CARGO_NET_GIT_FETCH_WITH_CLI=true\nexport GIT_SSL_NO_VERIFY=1\nexport CURL_CA_BUNDLE=""\nexport SSL_CERT_FILE=""\nexec /root/.cargo/bin/cargo.real "$@"\n' > /root/.cargo/bin/cargo \
     && chmod +x /root/.cargo/bin/cargo \
     && ln -sf /root/.cargo/bin/* /usr/local/bin/ \
     && cp /root/.cargo/config.toml /usr/local/cargo/config.toml \
