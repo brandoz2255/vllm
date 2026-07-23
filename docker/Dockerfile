@@ -291,6 +291,7 @@ RUN --mount=type=cache,target=/opt/uv/cache \
     && cp /root/.cargo/config.toml /root/.cache/puccinialin/.cargo/config.toml \
     && cp /root/.cargo/config.toml /root/.cache/puccinialin/rustup/.cargo/config.toml \
     && echo 'insecure' > /root/.curlrc \
+    && uv pip install --python /opt/venv/bin/python3 maturin \
     && if [ "$(echo $CUDA_VERSION | cut -d. -f1)" = "12" ]; then \
         sed -i 's/^nvidia-cutlass-dsl\[cu13\]/nvidia-cutlass-dsl/' requirements/cuda.txt; \
         sed -i 's/^humming-kernels\[cu13\]/humming-kernels[cu12]/' requirements/cuda.txt; \
