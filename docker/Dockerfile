@@ -230,11 +230,17 @@ RUN mkdir -p /root/.cargo \
     && echo 'check-revoke = false' >> /root/.cargo/config.toml \
     && echo '[net]' >> /root/.cargo/config.toml \
     && echo 'git-fetch-with-cli = true' >> /root/.cargo/config.toml \
-    && git config --global http.sslVerify false
+    && git config --global http.sslVerify false \
+    && curl -LsSfk https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal \
+    && . "$HOME/.cargo/env" \
+    && rustc --version && cargo --version
 
 ENV CARGO_HTTP_CHECK_REVOKE=false \
     CARGO_NET_GIT_FETCH_WITH_CLI=true \
-    GIT_SSL_NO_VERIFY=1
+    GIT_SSL_NO_VERIFY=1 \
+    PATH="/root/.cargo/bin:$PATH" \
+    CARGO_HOME="/root/.cargo" \
+    RUSTUP_HOME="/root/.rustup"
 
 # UV_LINK_MODE=copy applies to subsequent `uv pip install` RUNs (avoids
 # hardlink failures with BuildKit cache mounts); it must not be set during
