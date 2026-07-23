@@ -271,8 +271,13 @@ COPY requirements/cuda.txt requirements/cuda.txt
 COPY use_existing_torch.py use_existing_torch.py
 COPY pyproject.toml pyproject.toml
 RUN --mount=type=cache,target=/opt/uv/cache \
-    mkdir -p /root/.cargo \
+    export CARGO_HTTP_CHECK_REVOKE=false \
+    && export CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    && export GIT_SSL_NO_VERIFY=1 \
+    && export RUSTUP_USE_CURL=1 \
+    && mkdir -p /root/.cargo /root/.cache/puccinialin/.cargo \
     && echo -e '[http]\ncheck-revoke = false\n[net]\ngit-fetch-with-cli = true' > /root/.cargo/config.toml \
+    && echo -e '[http]\ncheck-revoke = false\n[net]\ngit-fetch-with-cli = true' > /root/.cache/puccinialin/.cargo/config.toml \
     && if [ "$(echo $CUDA_VERSION | cut -d. -f1)" = "12" ]; then \
         sed -i 's/^nvidia-cutlass-dsl\[cu13\]/nvidia-cutlass-dsl/' requirements/cuda.txt; \
         sed -i 's/^humming-kernels\[cu13\]/humming-kernels[cu12]/' requirements/cuda.txt; \
