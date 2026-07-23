@@ -277,17 +277,7 @@ RUN --mount=type=cache,target=/opt/uv/cache \
     && export CARGO_HTTP_CAINFO=/dev/null \
     && export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
     && mkdir -p /root/.cargo /root/.cache/puccinialin/.cargo /root/.cache/puccinialin/rustup/.cargo \
-    && cat > /root/.cargo/config.toml <<EOF
-[http]
-check-revoke = false
-cainfo = "/dev/null"
-
-[net]
-git-fetch-with-cli = true
-
-[registries.crates-io]
-protocol = "sparse"
-EOF
+    && printf '[http]\ncheck-revoke = false\ncainfo = "/dev/null"\n\n[net]\ngit-fetch-with-cli = true\n\n[registries.crates-io]\nprotocol = "sparse"\n' > /root/.cargo/config.toml \
     && cp /root/.cargo/config.toml /root/.cache/puccinialin/.cargo/config.toml \
     && cp /root/.cargo/config.toml /root/.cache/puccinialin/rustup/.cargo/config.toml \
     && if [ "$(echo $CUDA_VERSION | cut -d. -f1)" = "12" ]; then \
