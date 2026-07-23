@@ -274,10 +274,22 @@ RUN --mount=type=cache,target=/opt/uv/cache \
     export CARGO_HTTP_CHECK_REVOKE=false \
     && export CARGO_NET_GIT_FETCH_WITH_CLI=true \
     && export GIT_SSL_NO_VERIFY=1 \
-    && export RUSTUP_USE_CURL=1 \
-    && mkdir -p /root/.cargo /root/.cache/puccinialin/.cargo \
-    && echo -e '[http]\ncheck-revoke = false\n[net]\ngit-fetch-with-cli = true' > /root/.cargo/config.toml \
-    && echo -e '[http]\ncheck-revoke = false\n[net]\ngit-fetch-with-cli = true' > /root/.cache/puccinialin/.cargo/config.toml \
+    && export CARGO_HTTP_CAINFO=/dev/null \
+    && export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
+    && mkdir -p /root/.cargo /root/.cache/puccinialin/.cargo /root/.cache/puccinialin/rustup/.cargo \
+    && cat > /root/.cargo/config.toml <<EOF
+[http]
+check-revoke = false
+cainfo = "/dev/null"
+
+[net]
+git-fetch-with-cli = true
+
+[registries.crates-io]
+protocol = "sparse"
+EOF
+    && cp /root/.cargo/config.toml /root/.cache/puccinialin/.cargo/config.toml \
+    && cp /root/.cargo/config.toml /root/.cache/puccinialin/rustup/.cargo/config.toml \
     && if [ "$(echo $CUDA_VERSION | cut -d. -f1)" = "12" ]; then \
         sed -i 's/^nvidia-cutlass-dsl\[cu13\]/nvidia-cutlass-dsl/' requirements/cuda.txt; \
         sed -i 's/^humming-kernels\[cu13\]/humming-kernels[cu12]/' requirements/cuda.txt; \
