@@ -345,7 +345,12 @@ WORKDIR /workspace
 
 COPY requirements/build/rust.txt requirements/build/rust.txt
 RUN --mount=type=cache,target=/opt/uv/cache \
-    uv pip install --python /opt/venv/bin/python3 -r requirements/build/rust.txt
+    export CARGO_HTTP_CHECK_REVOKE=false \
+    && export CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    && export GIT_SSL_NO_VERIFY=1 \
+    && export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
+    && export SSL_CERT_FILE="" \
+    && uv pip install --python /opt/venv/bin/python3 -r requirements/build/rust.txt
 
 # Copy only the Rust build inputs; build_rust.sh publishes artifacts needed
 # by the wheel build stage.
@@ -368,7 +373,12 @@ ENV SCCACHE_SERVER_PORT=4227
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --mount=type=secret,id=aws-credentials,target=/root/.aws/credentials,required=false \
-    if [ "$USE_SCCACHE" = "1" ]; then \
+    export CARGO_HTTP_CHECK_REVOKE=false \
+    && export CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    && export GIT_SSL_NO_VERIFY=1 \
+    && export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
+    && export SSL_CERT_FILE="" \
+    && if [ "$USE_SCCACHE" = "1" ]; then \
         if [ -n "${SCCACHE_ENDPOINT}" ]; then export SCCACHE_ENDPOINT="${SCCACHE_ENDPOINT}"; fi; \
         export RUSTC_WRAPPER=sccache; \
         sccache --show-stats; \
